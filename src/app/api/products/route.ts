@@ -66,8 +66,17 @@ export async function GET(request: Request) {
     })
   } catch (error) {
     console.error("Error fetching products:", error)
+    // Retornar estructura esperada con array vacío en caso de error
     return NextResponse.json(
-      { error: "Error al obtener productos" },
+      {
+        products: [],
+        pagination: {
+          page: 1,
+          limit: 12,
+          total: 0,
+          totalPages: 1,
+        },
+      },
       { status: 500 }
     )
   }

@@ -40,7 +40,7 @@ export default function ProductsPage() {
   const [totalPages, setTotalPages] = useState(1)
   const [filters, setFilters] = useState({
     search: searchParams.get("search") || "",
-    category: searchParams.get("category") || "",
+    category: searchParams.get("category") || "all",
     minPrice: "",
     maxPrice: "",
   })
@@ -57,9 +57,16 @@ export default function ProductsPage() {
     try {
       const res = await fetch("/api/categories")
       const data = await res.json()
-      setCategories(data)
+      // Asegurarse de que data sea un array
+      if (Array.isArray(data)) {
+        setCategories(data)
+      } else {
+        console.error("Categories API returned non-array:", data)
+        setCategories([])
+      }
     } catch (error) {
       console.error("Error fetching categories:", error)
+      setCategories([])
     }
   }
 
@@ -71,16 +78,31 @@ export default function ProductsPage() {
         limit: "12",
       })
       if (filters.search) params.append("search", filters.search)
-      if (filters.category) params.append("category", filters.category)
+      if (filters.category && filters.category !== "all") params.append("category", filters.category)
       if (filters.minPrice) params.append("minPrice", filters.minPrice)
       if (filters.maxPrice) params.append("maxPrice", filters.maxPrice)
 
       const res = await fetch(`/api/products?${params}`)
       const data = await res.json()
-      setProducts(data.products)
-      setTotalPages(data.pagination.totalPages)
+      
+      // Asegurarse de que products sea un array
+      if (Array.isArray(data.products)) {
+        setProducts(data.products)
+      } else {
+        console.error("Products API returned non-array:", data)
+        setProducts([])
+      }
+      
+      // Asegurarse de que pagination exista
+      if (data.pagination && typeof data.pagination.totalPages === 'number') {
+        setTotalPages(data.pagination.totalPages)
+      } else {
+        setTotalPages(1)
+      }
     } catch (error) {
       console.error("Error fetching products:", error)
+      setProducts([])
+      setTotalPages(1)
     } finally {
       setLoading(false)
     }
@@ -121,8 +143,8 @@ export default function ProductsPage() {
                 <SelectValue placeholder="Todas las categorías" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas las categorías</SelectItem>
-                {categories.map((category) => (
+                <SelectItem value="all">Todas las categorías</SelectItem>
+                {Array.isArray(categories) && categories.map((category) => (
                   <SelectItem key={category.id} value={category.slug}>
                     {category.name}
                   </SelectItem>
@@ -158,7 +180,7 @@ export default function ProductsPage() {
             </Card>
           ))}
         </div>
-      ) : products.length === 0 ? (
+      ) : !Array.isArray(products) || products.length === 0 ? (
         <div className="py-12 text-center">
           <p className="text-muted-foreground">No se encontraron productos</p>
         </div>
